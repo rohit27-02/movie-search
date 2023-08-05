@@ -1,15 +1,21 @@
 // JavaScript code for API calls and other functionalities
 const apiKey = 'a97d7639'; // Replace with your actual OMDB API key
 
-// Function to fetch movie details by IMDb ID
-function getMovieDetailsById(imdbID) {
+// Function to show the loader
+function showLoader() {
+    document.getElementById('loaderContainer').style.display = 'flex';
+}
 
-    return fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=${apiKey}`)
-        .then(response => response.json())
-        .catch(error => {
-            console.error('Error fetching movie data:', error);
-            return null;
-        });
+// Function to hide the loader
+function hideLoader() {
+    document.getElementById('loaderContainer').style.display = 'none';
+}
+
+// Function to fetch movie details by IMDb ID
+async function getMovieDetailsById(imdbID) {
+    const response = await fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=${apiKey}`);
+    const data = await response.json();
+    return data;
 }
 
 // Function to add a movie to a playlist
@@ -18,7 +24,7 @@ function addMovieToPlaylist(playlistType, imdbID) {
         .then(movie => {
             if (movie) {
                 const playlistName = prompt(`Enter the name of the ${playlistType} playlist you want to add this movie to:`);
-                if (playlistName !== null) {
+                if (playlistName !== null && playlistName.trim() !== '') {
                     let playlists = JSON.parse(localStorage.getItem(`${playlistType}Playlists`)) || {};
 
                     if (!playlists[playlistName]) {
@@ -31,6 +37,8 @@ function addMovieToPlaylist(playlistType, imdbID) {
 
                     localStorage.setItem(`${playlistType}Playlists`, JSON.stringify(playlists));
                     alert(`The movie "${movie.Title}" has been added to the ${playlistType} playlist "${playlistName}"!`);
+                    displayPlaylists('public');
+                    displayPlaylists('private');
                 }
             } else {
                 console.error('Error fetching movie details.');
@@ -38,22 +46,19 @@ function addMovieToPlaylist(playlistType, imdbID) {
         });
 }
 
-
 document.getElementById('searchButton').addEventListener('click', () => {
     const searchInput = document.getElementById('searchInput').value;
-    // Implement OMDB API call here to search for movies based on searchInput
-    // Display the search results in the #searchResults div
+
+    // Show the loading spinner
+    showLoader();
     fetch(`https://www.omdbapi.com/?s=${searchInput}&apikey=${apiKey}`)
         .then(response => response.json())
         .then(data => {
-            // Handle the API response here
-            console.log(data);
-            // Clear previous results
+            // Hide the loading spinner
+            hideLoader();
             document.getElementById('searchResults').innerHTML = '';
 
-            // Check if data.Response is "True" (i.e., API call successful)
             if (data.Response === 'True') {
-                // Loop through the movies and display them in the container
                 data.Search.forEach(movie => {
                     const movieItem = document.createElement('div');
                     movieItem.classList.add('movie-item');
@@ -65,13 +70,11 @@ document.getElementById('searchButton').addEventListener('click', () => {
                             <p>Type: ${movie.Type}</p>
                             <button class="add-to-public" onclick="addMovieToPlaylist('public', '${movie.imdbID}')">Add to Public Playlist</button>
                             <button class="add-to-private" onclick="addMovieToPlaylist('private', '${movie.imdbID}')">Add to Private Playlist</button>
-
                         </div>
                     `;
                     document.getElementById('searchResults').appendChild(movieItem);
                 });
             } else {
-                // Handle the case when no movies are found
                 const noResults = document.createElement('p');
                 noResults.textContent = 'No movies found.';
                 document.getElementById('searchResults').appendChild(noResults);
@@ -83,15 +86,13 @@ document.getElementById('searchButton').addEventListener('click', () => {
 
 });
 
-
 document.getElementById('createPublicPlaylist').addEventListener('click', () => {
     const playlistInput = document.getElementById('playlistInput').value.trim();
 
     if (playlistInput !== '') {
-        // Check if the playlist already exists
-        const existingPublicPlaylists = JSON.parse(localStorage.getItem('publicPlaylists')) || [];
-        if (!existingPublicPlaylists.includes(playlistInput)) {
-            existingPublicPlaylists.push(playlistInput);
+        const existingPublicPlaylists = JSON.parse(localStorage.getItem('publicPlaylists')) || {};
+        if (!existingPublicPlaylists[playlistInput]) {
+            existingPublicPlaylists[playlistInput] = {}; // Initialize an object for the playlist
             localStorage.setItem('publicPlaylists', JSON.stringify(existingPublicPlaylists));
             displayPlaylists('public');
         } else {
@@ -106,10 +107,9 @@ document.getElementById('createPrivatePlaylist').addEventListener('click', () =>
     const playlistInput = document.getElementById('playlistInput').value.trim();
 
     if (playlistInput !== '') {
-        // Check if the playlist already exists
-        const existingPrivatePlaylists = JSON.parse(localStorage.getItem('privatePlaylists')) || [];
-        if (!existingPrivatePlaylists.includes(playlistInput)) {
-            existingPrivatePlaylists.push(playlistInput);
+        const existingPrivatePlaylists = JSON.parse(localStorage.getItem('privatePlaylists')) || {};
+        if (!existingPrivatePlaylists[playlistInput]) {
+            existingPrivatePlaylists[playlistInput] = {}; // Initialize an object for the playlist
             localStorage.setItem('privatePlaylists', JSON.stringify(existingPrivatePlaylists));
             displayPlaylists('private');
         } else {
@@ -124,33 +124,64 @@ document.getElementById('createPrivatePlaylist').addEventListener('click', () =>
 function displayPlaylists(type) {
     const playlistsDiv = document.getElementById(`${type}Playlists`);
     playlistsDiv.innerHTML = '';
-    const playlists = JSON.parse(localStorage.getItem(`${type}Playlists`)) || [];
+    const playlists = JSON.parse(localStorage.getItem(`${type}Playlists`)) || {};
 
     const playlistsHeading = document.createElement('h1');
     playlistsHeading.textContent = `${type} Playlists`;
     playlistsDiv.appendChild(playlistsHeading);
 
-
-    if (playlists.length === 0) {
+    const playlistNames = Object.keys(playlists);
+    if (playlistNames.length === 0) {
         const noPlaylistsMsg = document.createElement('p');
         noPlaylistsMsg.textContent = `No ${type} playlists found.`;
         playlistsDiv.appendChild(noPlaylistsMsg);
     } else {
+        playlistNames.forEach(playlist => {
+            const playlistContainer = document.createElement('div');
+            playlistContainer.classList.add('playlist-container');
 
-        playlists.forEach(playlist => {
             const playlistItem = document.createElement('div');
             playlistItem.classList.add('playlist-item');
             playlistItem.textContent = playlist;
-            playlistsDiv.appendChild(playlistItem);
+
+            // Add click event listener to display series in the playlist
+            playlistItem.addEventListener('click', () => {
+                displaySeriesInPlaylist(type, playlist, playlistContainer);
+            });
+
+            playlistContainer.appendChild(playlistItem);
+            playlistsDiv.appendChild(playlistContainer);
         });
     }
 }
 
+// Function to display series in a playlist
+function displaySeriesInPlaylist(type, playlist, container) {
+    const playlists = JSON.parse(localStorage.getItem(`${type}Playlists`)) || {};
+    const playlistSeries = playlists[playlist];
+
+    container.innerHTML = '';
+
+    const playlistHeading = document.createElement('h2');
+    playlistHeading.textContent = `${type} Playlist - ${playlist}`;
+    container.appendChild(playlistHeading);
+
+    if (!playlistSeries || Object.keys(playlistSeries).length === 0) {
+        const noSeriesMsg = document.createElement('p');
+        noSeriesMsg.textContent = `No series found in this playlist.`;
+        container.appendChild(noSeriesMsg);
+    } else {
+        const seriesList = document.createElement('ul');
+        Object.values(playlistSeries).forEach(series => {
+            const seriesItem = document.createElement('li');
+            seriesItem.textContent = series.Title;
+            seriesList.appendChild(seriesItem);
+        });
+        container.appendChild(seriesList);
+    }
+}
+
+
 // Display initial playlists on page load
 displayPlaylists('public');
 displayPlaylists('private');
-
-
-
-
-

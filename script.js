@@ -4,7 +4,7 @@ const apiKey = 'a97d7639'; // Replace with your actual OMDB API key
 // Function to fetch movie details by IMDb ID
 function getMovieDetailsById(imdbID) {
 
-    return fetch(`http://www.omdbapi.com/?i=${imdbID}&apikey=${apiKey}`)
+    return fetch(`https://www.omdbapi.com/?i=${imdbID}&apikey=${apiKey}`)
         .then(response => response.json())
         .catch(error => {
             console.error('Error fetching movie data:', error);
@@ -43,7 +43,7 @@ document.getElementById('searchButton').addEventListener('click', () => {
     const searchInput = document.getElementById('searchInput').value;
     // Implement OMDB API call here to search for movies based on searchInput
     // Display the search results in the #searchResults div
-    fetch(`http://www.omdbapi.com/?s=${searchInput}&apikey=${apiKey}`)
+    fetch(`https://www.omdbapi.com/?s=${searchInput}&apikey=${apiKey}`)
         .then(response => response.json())
         .then(data => {
             // Handle the API response here
